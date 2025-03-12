@@ -40,7 +40,40 @@ MakeWinPEMedia /ISO C:\WinPE_amd64 C:\WinPE_amd64\WinPE_Base.iso
 
 ---
 
-## ✨ Passo 3: Copiar o Arquivo WIM e Criar Scripts
+## ✨ Passo 3: Montar e Personalizar o Boot do WinPE
+
+### 1. Montar a imagem `boot.wim`
+
+```cmd
+Dism /Mount-Image /ImageFile:C:\WinPE_amd64\media\sources\boot.wim /Index:1 /MountDir:C:\WinPE_amd64\mount
+```
+
+### 2. Editar o `startnet.cmd`
+
+Edite `startnet.cmd` dentro da pasta `System32` do WinPE:
+
+```cmd
+notepad C:\WinPE_amd64\mount\Windows\System32\startnet.cmd
+```
+
+Adicione ao final:
+
+```bat
+wpeinit
+X:\install_windows.bat
+```
+
+Salve e feche.
+
+### 3. Desmontar e salvar alterações
+
+```cmd
+Dism /Unmount-Image /MountDir:C:\WinPE_amd64\mount /Commit
+```
+
+---
+
+## ✨ Passo 4: Copiar o Arquivo WIM e Criar Scripts
 
 ### 1. Copiar o Arquivo `.WIM` para o WinPE
 
@@ -74,19 +107,23 @@ if "%WIMDRIVE%"=="" (
 :: Preparar o disco
 diskpart /s X:\diskpart_script.txt
 
+:: Definir a partição do sistema como ativa
+diskpart /s X:\diskpart_bootfix.txt
+
 :: Aplicar a imagem do Windows
 dism /Apply-Image /ImageFile:%WIMDRIVE%:\sources\Windows.wim /Index:1 /ApplyDir:C:\
 
-:: Configurar o boot
+:: Corrigir o setor de boot
+bootsect /nt60 C: /force /mbr
 bcdboot C:\Windows /s C: /f BIOS
 
 :: Reiniciar o sistema
 wpeutil reboot
 ```
 
-### 3. Criar o Script de Particionamento do Disco
+### 3. Criar os Scripts de Particionamento e Boot
 
-Crie um arquivo `diskpart_script.txt` e adicione:
+Crie `diskpart_script.txt`:
 
 ```txt
 select disk 0
@@ -97,31 +134,22 @@ assign letter=C
 exit
 ```
 
+Crie `diskpart_bootfix.txt`:
+
+```txt
+select disk 0
+select partition 1
+active
+exit
+```
+
 ### 4. Copiar os Scripts para o WinPE
 
 ```cmd
 xcopy "C:\Caminho\Para\install_windows.bat" C:\WinPE_amd64\media\
 xcopy "C:\Caminho\Para\diskpart_script.txt" C:\WinPE_amd64\media\
+xcopy "C:\Caminho\Para\diskpart_bootfix.txt" C:\WinPE_amd64\media\
 ```
-
----
-
-## ✨ Passo 4: Configurar o WinPE para Rodar o Instalador
-
-1. Edite `startnet.cmd` dentro da pasta `System32` do WinPE:
-
-```cmd
-notepad C:\WinPE_amd64\media\Windows\System32\startnet.cmd
-```
-
-2. Adicione ao final:
-
-```bat
-wpeinit
-X:\install_windows.bat
-```
-
-Salve e feche.
 
 ---
 
@@ -159,7 +187,7 @@ MakeWinPEMedia /UFD C:\WinPE_amd64 E:
 1. O WinPE inicia automaticamente.
 2. O script `install_windows.bat` é executado e verifica a unidade correta do **arquivo WIM**.
 3. O **disco é formatado** e a **imagem do Windows é aplicada**.
-4. O **boot é configurado** e o sistema **reinicia automaticamente**.
+4. O **boot é corrigido** e o sistema **reinicia automaticamente**.
 5. O Windows inicia e finaliza a instalação!
 
 ---
