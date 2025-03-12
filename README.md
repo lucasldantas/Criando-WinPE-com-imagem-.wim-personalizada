@@ -1,6 +1,6 @@
-# Criando um WinPE Bootável para Instalar o Windows a partir de um Arquivo WIM
+# Criando um WinPE Bootável para Instalar o Windows (Modo UEFI)
 
-Este tutorial guiará você no processo de criação de um ambiente **WinPE bootável** e na configuração de um instalador do Windows usando um único arquivo **WIM**. Isso permite a instalação personalizada do Windows sem necessidade de um instalador tradicional.
+Este tutorial guiará você na criação de um ambiente **WinPE bootável UEFI** e na configuração de um instalador do Windows usando um **arquivo WIM**.
 
 ---
 
@@ -29,8 +29,6 @@ Abra o **Prompt de Comando como Administrador** e execute:
 ```cmd
 copype amd64 C:\WinPE_amd64
 ```
-
-*(Para 32 bits, use `x86` em vez de `amd64`.)*
 
 Para testar a ISO base do WinPE (opcional):
 
@@ -90,7 +88,7 @@ Crie um arquivo `install_windows.bat` e adicione:
 title Instalador Automatizado do Windows
 color 0A
 echo ==========================================
-echo  INSTALADOR DO WINDOWS
+echo  INSTALADOR DO WINDOWS (UEFI)
 echo ==========================================
 echo Iniciando o processo de instalação...
 pause
@@ -104,42 +102,33 @@ if "%WIMDRIVE%"=="" (
     exit
 )
 
-:: Preparar o disco
+:: Preparar o disco em GPT
 diskpart /s X:\diskpart_script.txt
-
-:: Definir a partição do sistema como ativa
-diskpart /s X:\diskpart_bootfix.txt
 
 :: Aplicar a imagem do Windows
 dism /Apply-Image /ImageFile:%WIMDRIVE%:\sources\Windows.wim /Index:1 /ApplyDir:C:\
 
-:: Corrigir o setor de boot
-bootsect /nt60 C: /force /mbr
-bcdboot C:\Windows /s C: /f BIOS
+:: Configurar boot UEFI
+bcdboot C:\Windows /s Z: /f UEFI
 
 :: Reiniciar o sistema
 wpeutil reboot
 ```
 
-### 3. Criar os Scripts de Particionamento e Boot
+### 3. Criar os Scripts de Particionamento UEFI
 
 Crie `diskpart_script.txt`:
 
 ```txt
 select disk 0
 clean
+convert gpt
+create partition efi size=100
+format fs=fat32 quick
+assign letter=Z
 create partition primary
 format fs=ntfs quick
 assign letter=C
-exit
-```
-
-Crie `diskpart_bootfix.txt`:
-
-```txt
-select disk 0
-select partition 1
-active
 exit
 ```
 
@@ -148,7 +137,6 @@ exit
 ```cmd
 xcopy "C:\Caminho\Para\install_windows.bat" C:\WinPE_amd64\media\
 xcopy "C:\Caminho\Para\diskpart_script.txt" C:\WinPE_amd64\media\
-xcopy "C:\Caminho\Para\diskpart_bootfix.txt" C:\WinPE_amd64\media\
 ```
 
 ---
@@ -186,14 +174,14 @@ MakeWinPEMedia /UFD C:\WinPE_amd64 E:
 
 1. O WinPE inicia automaticamente.
 2. O script `install_windows.bat` é executado e verifica a unidade correta do **arquivo WIM**.
-3. O **disco é formatado** e a **imagem do Windows é aplicada**.
-4. O **boot é corrigido** e o sistema **reinicia automaticamente**.
+3. O **disco é formatado como GPT** e a **imagem do Windows é aplicada**.
+4. O **boot UEFI é configurado corretamente**.
 5. O Windows inicia e finaliza a instalação!
 
 ---
 
 ## ✔ Conclusão
 
-Agora você tem uma **ISO WinPE bootável** que permite instalar **Windows** de forma automatizada usando um arquivo `.WIM`. 
+Agora você tem uma **ISO WinPE bootável UEFI** que permite instalar **Windows** de forma automatizada usando um arquivo `.WIM`. 
 
 Se precisar de mais ajustes ou melhorias, contribua no repositório! 🚀😃
