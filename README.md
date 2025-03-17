@@ -183,5 +183,3 @@ MakeWinPEMedia /UFD C:\WinPE_amd64 E:
 ## ✔ Conclusão
 
 Agora você tem uma **ISO WinPE bootável UEFI** que permite instalar **Windows** de forma automatizada usando um arquivo `.WIM`. 
-
-Se precisar de mais ajustes ou melhorias, contribua no repositório! 🚀😃
